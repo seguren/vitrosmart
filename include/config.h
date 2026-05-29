@@ -39,20 +39,28 @@
 // ── Pines Salida ────────────────────────────────────────────
 #define PIN_RELAY1 10 // 1000W
 #define PIN_RELAY2 11 // 1000W
-#define PIN_BUZZER 12 // Activo-bajo, LOW=ON (5V con transistor PNP o pull-up externo)
+#define PIN_BUZZER                                                             \
+  12 // Activo-bajo, LOW=ON (5V con transistor PNP o pull-up externo)
 #define PIN_NTC 4 // ADC1_CH3 (GPIO4) — GPIO14 es ADC2, no disponible con WiFi
 
 // ── I2C LCD ─────────────────────────────────────────────────
 #define LCD_SDA 33    // SDA por defecto LOLIN S2 Mini
 #define LCD_SCL 35    // SCL por defecto LOLIN S2 Mini
 #define LCD_ADDR 0x27 // Dirección PCF8574 (0x3F si no responde)
-#define LCD_COLS 16
-#define LCD_ROWS 2
+#ifndef LCD_COLS
+  #define LCD_COLS 20
+#endif
+#ifndef LCD_ROWS
+  #define LCD_ROWS 4
+#endif
 
 // ── Touch ───────────────────────────────────────────────────
-#define TOUCH_THRESHOLD 700  // incremento absoluto sobre baseline (counts) para detección a través del vidrio
-#define TOUCH_HOLD_MS 150    // ms sostenido para registrar toque
-#define TOUCH_RELEASE_MS 80 // ms inactivo antes de cancelar hold (tolerancia ruido)
+#define TOUCH_THRESHOLD                                                        \
+  700 // incremento absoluto sobre baseline (counts) para detección a través del
+      // vidrio
+#define TOUCH_HOLD_MS 150 // ms sostenido para registrar toque
+#define TOUCH_RELEASE_MS                                                       \
+  80 // ms inactivo antes de cancelar hold (tolerancia ruido)
 #define TOUCH_DEBOUNCE_MS 800 // ms entre lecturas válidas
 
 // ── NTC ─────────────────────────────────────────────────────
@@ -69,14 +77,14 @@
 #define TEMP_DEFAULT 24 // °C al arranque
 
 // ── Tiempo ──────────────────────────────────────────────────
-#define TIME_MIN_MIN 0      // Minutos mínimo
-#define TIME_MAX_MIN 240    // Minutos máximo (4hs)
-#define TIME_STEP_MIN 10    // Paso por pulsación
-#define TIME_DEFAULT_MIN 60 // Minutos al arranque
+#define TIME_MIN_MIN 0     // Minutos mínimo
+#define TIME_MAX_MIN 240   // Minutos máximo (4hs)
+#define TIME_STEP_MIN 10   // Paso por pulsación
+#define TIME_DEFAULT_MIN 0 // Minutos al arranque
 
 // ── Timeouts ────────────────────────────────────────────────
 #define NTC_INTERVAL_MS 10000      // Intervalo de lectura del sensor NTC (ms)
-#define EDIT_TIMEOUT_MS 5000       // Vuelve a IDLE tras 5s sin toque
+#define EDIT_TIMEOUT_MS 15000      // Vuelve a IDLE tras 15s sin toque
 #define BUZZER_BEEP_MS 80          // Duración beep confirmación
 #define BUZZER_HOLD_MS 3000        // ADD+SUB simultáneo para toggle buzzer
 #define BACKLIGHT_TIMEOUT_MS 30000 // Apaga backlight LCD tras 30s sin toque

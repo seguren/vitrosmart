@@ -13,7 +13,7 @@ Firmware para ESP32-S2 que convierte un vitroconvector (calefactor eléctrico) e
 - **Scheduler NTP**: enciende y apaga el equipo a horas programadas, sincronizado con servidores de tiempo de internet
 - **Interfaz web**: dashboard responsive accesible desde cualquier dispositivo en la red local
 - **Controles táctiles**: 6 pads capacitivos para control físico sin conexión a red
-- **Pantalla LCD 16×2**: muestra estado, temperatura, timer, hora y modo activo en tiempo real
+- **Pantalla LCD 20×4**: muestra estado, temperatura, timer, hora, modo activo e íconos de buzzer y scheduler en tiempo real
 - **Backlight inteligente**: se apaga tras inactividad; cualquier toque lo enciende sin ejecutar la acción
 - **Persistencia en flash**: setpoint de temperatura y configuración del scheduler sobreviven reinicios
 - **Modo offline**: touch y LCD siguen funcionando aunque no haya conexión WiFi
@@ -26,7 +26,7 @@ Firmware para ESP32-S2 que convierte un vitroconvector (calefactor eléctrico) e
 |---|---|
 | Microcontrolador | LOLIN S2 Mini (ESP32-S2) |
 | Módulo de relés | 2 canales, 10A / 220V CA, lógica activa-alta |
-| Pantalla | LCD 16×2 con módulo I2C PCF8574 (dirección 0x27) |
+| Pantalla | LCD 20×4 con módulo I2C PCF8574 (dirección 0x27) |
 | Sensor de temperatura | NTC 10kΩ (β = 3950) |
 | Resistencia divisor | 47kΩ entre 3.3V y el nodo ADC |
 | Buzzer | Piezoeléctrico pasivo (usa `tone()` a 2500 Hz); activo-bajo, GPIO es el lado negativo |
@@ -50,7 +50,7 @@ ESP32-S2 Mini
 ├── GPIO 4  (ADC1_CH3) ── Sensor NTC
 │
 ├── GPIO 33 (SDA)      ──┐
-└── GPIO 35 (SCL)      ──┴── LCD I2C 16×2
+└── GPIO 35 (SCL)      ──┴── LCD I2C 20×4
 ```
 
 **Circuito NTC:**
@@ -93,10 +93,43 @@ Crear el archivo `include/secrets.h` (no está en el repo por seguridad):
 #define WEB_PASS  "tu-contraseña-web"
 ```
 
-### 3. Compilar y flashear
+### 3. Seleccionar el modelo de LCD
+
+El proyecto soporta dos tamaños de pantalla LCD. Antes de compilar, elegí el que corresponde a tu hardware.
+
+#### Opción A — Desde VS Code con la extensión PlatformIO (recomendado)
+
+En la barra inferior de VS Code aparece el entorno activo. Hacé clic en él para cambiarlo:
+
+```
+[ lolin_s2_mini_20x4 ]   ←  hacé clic acá para cambiar
+```
+
+Elegí entre:
+
+| Entorno | Display |
+|---|---|
+| `lolin_s2_mini_20x4` | LCD 20×4 (default) |
+| `lolin_s2_mini_16x2` | LCD 16×2 |
+
+Una vez seleccionado el entorno, usá los botones de compilar (✓) y subir (→) de la barra de PlatformIO normalmente.
+
+#### Opción B — Desde la terminal
 
 ```bash
-# Compilar
+# Compilar y subir con LCD 20x4
+pio run -e lolin_s2_mini_20x4 --target upload
+
+# Compilar y subir con LCD 16x2
+pio run -e lolin_s2_mini_16x2 --target upload
+```
+
+> No es necesario modificar ningún archivo de código. El entorno seleccionado le indica al compilador qué layout usar en toda la pantalla automáticamente.
+
+### 4. Compilar y flashear
+
+```bash
+# Compilar (entorno por defecto: 20x4)
 pio run
 
 # Compilar y subir al dispositivo
@@ -157,11 +190,11 @@ Una vez conectado a la red, el dispositivo muestra su IP en el LCD (también por
 | **ONOFF** | Encender / Apagar | — |
 | **POWER** | Cicla potencia manual: 0% → 50% → 100% → 0% | Activa / desactiva **Modo Smart** |
 | **TEMP** | Entra / sale del modo edición de temperatura | — |
-| **TIME** | Primera vez: entra en modo edición de timer. Segunda vez: confirma y **arranca el timer** (o lo detiene si el valor es 0) | — |
+| **TIME** | Primera vez: entra en modo edición de timer. Segunda vez: confirma y **arranca el timer** (o lo detiene si el valor es 0) | Muestra la configuración del scheduler en pantalla |
 | **ADD (+)** | Si no hay modo edición activo: entra en edición temperatura. Si hay modo activo: +1°C / +10 minutos | — |
 | **SUB (-)** | Si no hay modo edición activo: entra en edición temperatura. Si hay modo activo: -1°C / -10 minutos | — |
 
-> **Modo edición**: al entrar en EDIT_TEMP o EDIT_TIME, el LCD muestra el valor a editar. Presionar el mismo pad nuevamente (TEMP o TIME) confirma y sale. La edición también se cancela automáticamente tras `EDIT_TIMEOUT_MS` de inactividad.
+> **Modo edición**: al entrar en EDIT_TEMP o EDIT_TIME, el LCD muestra el valor a editar en las filas 0–1 y una guía de uso en las filas 2–3. Presionar el mismo pad nuevamente (TEMP o TIME) confirma y sale. La edición también se cancela automáticamente tras `EDIT_TIMEOUT_MS` de inactividad.
 
 ### Gesto buzzer
 
@@ -169,38 +202,53 @@ Mantener **ADD y SUB simultáneos** durante 3 segundos activa o desactiva el buz
 
 ### Wake-on-touch (backlight apagado)
 
-Cuando el backlight del LCD está apagado, **el primer toque en cualquier pad únicamente enciende la pantalla**, sin ejecutar la acción asociada al pad. El hold timer se resetea al momento de encender, por lo que hay que soltar y volver a presionar para realizar una acción. Esto evita acciones accidentales al despertar el display.
+Cuando el backlight del LCD está apagado, **el primer toque en cualquier pad únicamente enciende la pantalla**, sin ejecutar la acción asociada al pad. Tras despertar, hay un período de gracia de 600 ms durante el cual se ignoran todos los toques — es necesario soltar y volver a presionar para realizar una acción. Esto evita acciones accidentales al despertar el display.
 
 ---
 
 ## Pantalla LCD
 
-### Layout en reposo (modo idle)
+### Layout en reposo (modo idle) — 20×4
 
 ```
-Fila 0: ON  100% 22.3/22C    ← estado + potencia + temperatura actual/setpoint
-Fila 0: ON  SMRT 22.3/22C    ← cuando está activo el modo Smart
-Fila 0: OFF      22.3/22C    ← cuando apagado
-
-Fila 1: T:01:30  14:22  🕐   ← timer corriendo + hora NTP + ícono scheduler
-Fila 1:          14:22  🕐   ← timer detenido + hora NTP + ícono scheduler
-Fila 1:          14:22       ← sin scheduler activo
+Fila 0: ON   100%   14:22 🔔🕐   ← estado + potencia + hora + ícono buzzer + ícono scheduler
+Fila 1: Actual:22.3  Set:24C     ← temperatura actual y setpoint
+Fila 2: Timer:         01:30     ← timer en curso (en blanco si detenido)
+Fila 3: Calentando...            ← estado del termostato (solo en modo Smart)
 ```
 
-El **ícono de reloj** (🕐) en la posición 16 de la fila 1 indica que el scheduler está habilitado.
+| Ícono | Posición | Significado |
+|---|---|---|
+| 🔔 (campanita) | Fila 0, col 18 | Buzzer habilitado |
+| 🕐 (reloj) | Fila 0, col 19 | Scheduler activo |
+
+### Modos de edición
+
+Al entrar en modo edición (TEMP o TIME), las filas 0–1 muestran el valor editable y las filas 2–3 muestran una guía de uso:
+
+```
+>> Setpoint Temp:        >> Setpoint Timer:
+         24 C                    01:30
++ ADD      - SUB         + ADD      - SUB
+TEMP para confirmar      TIME para iniciar
+```
+
+### Pantalla de scheduler
+
+Mantener **TIME** 2 segundos muestra la configuración actual del scheduler:
+
+```
+>> Scheduler:
+Encendido:    07:30
+Apagado:      22:00
+Estado:        Activo
+```
+
+Se cierra automáticamente tras `EDIT_TIMEOUT_MS` de inactividad.
 
 ### Mensajes temporales
 
-Durante eventos (encendido del termostato, scheduler, timer, etc.) el LCD muestra mensajes de 1–4 segundos y vuelve al modo idle automáticamente.
-
-### Diagnóstico al arranque
-
-Al iniciar, el LCD muestra brevemente los valores de baseline de los pads táctiles ON/OFF y ADD (útil para verificar la calibración):
-
-```
-ON:<baseline>
-ADD:<baseline>
-```
+Durante eventos (encendido del termostato, scheduler, timer, etc.) el LCD muestra mensajes de 1–4 segundos en las filas 0–1 y vuelve al modo idle automáticamente.
 
 ---
 
@@ -244,7 +292,7 @@ La retroiluminación se apaga automáticamente tras `BACKLIGHT_TIMEOUT_MS` (30 s
 
 Requiere sincronización NTP exitosa. Se configura desde la web indicando hora de encendido y hora de apagado (formato HH:MM). La configuración persiste en flash y sobrevive reinicios.
 
-Cuando el scheduler está habilitado, aparece un **ícono de reloj** en la posición 16 de la fila 1 del LCD.
+Cuando el scheduler está habilitado, aparece un **ícono de reloj** en la posición 19 de la fila 0 del LCD. La configuración actual se puede consultar en cualquier momento manteniendo presionado el pad **TIME** durante 2 segundos.
 
 El scheduler se almacena con el namespace `sched` en la NVS del ESP32 (Preferences).
 
@@ -274,7 +322,7 @@ vitroconvector/
 │   ├── timer_logic.h     # Timer de cuenta regresiva
 │   ├── ntp_time.h        # Sincronización NTP y scheduler
 │   ├── touch_handler.h   # Pads capacitivos y buzzer
-│   ├── lcd_menu.h        # Pantalla LCD I2C 16×2
+│   ├── lcd_menu.h        # Pantalla LCD I2C 20×4
 │   └── web_server.h      # HTTP server + HTML embebido
 ├── src/
 │   └── main.cpp          # Setup, loop principal, reconexión WiFi
@@ -291,15 +339,16 @@ Todos los parámetros ajustables están en `include/config.h`:
 |---|---|---|
 | `TEMP_MIN` / `TEMP_MAX` | 18 / 30°C | Rango del setpoint |
 | `TEMP_DEFAULT` | 24°C | Setpoint inicial |
+| `TIME_DEFAULT_MIN` | 0 min | Valor inicial del timer al arranque |
 | `TIME_MAX_MIN` | 240 min | Duración máxima del timer |
 | `TIME_STEP_MIN` | 10 min | Paso del timer por toque |
 | `NTC_INTERVAL_MS` | 10000 ms | Intervalo de lectura del sensor y evaluación del termostato |
-| `EDIT_TIMEOUT_MS` | 5000 ms | Tiempo hasta salir del modo edición por inactividad |
+| `EDIT_TIMEOUT_MS` | 15000 ms | Tiempo hasta salir del modo edición por inactividad |
 | `BACKLIGHT_TIMEOUT_MS` | 30000 ms | Tiempo hasta apagar el backlight LCD |
 | `BUZZER_BEEP_MS` | 80 ms | Duración del beep de confirmación |
 | `BUZZER_HOLD_MS` | 3000 ms | Tiempo de ADD+SUB simultáneos para toggle buzzer |
-| `TOUCH_THRESHOLD` | 10% | Incremento mínimo sobre el baseline para detectar toque (ESP32-S2: el valor sube al tocar) |
-| `TOUCH_HOLD_MS` | 300 ms | Tiempo sostenido requerido para registrar un toque válido |
+| `TOUCH_THRESHOLD` | 700 counts | Incremento absoluto sobre el baseline para detectar toque a través del vidrio |
+| `TOUCH_HOLD_MS` | 150 ms | Tiempo sostenido requerido para registrar un toque válido |
 | `TOUCH_RELEASE_MS` | 80 ms | Gracia antes de resetear el hold timer (tolerancia a ruido/EMI) |
 | `TOUCH_DEBOUNCE_MS` | 800 ms | Tiempo mínimo entre lecturas válidas del mismo pad |
 | `NTC_R_SERIES` | 47000 Ω | Resistencia del divisor (lado 3.3V) |
@@ -309,13 +358,13 @@ Todos los parámetros ajustables están en `include/config.h`:
 
 ### Nota sobre la detección táctil en ESP32-S2
 
-El ESP32-S2 **incrementa** el valor de `touchRead()` al detectar un toque, a diferencia del ESP32 original que lo decrementaba. El umbral de detección es:
+El ESP32-S2 **incrementa** el valor de `touchRead()` al detectar un toque, a diferencia del ESP32 original que lo decrementaba. El umbral de detección es absoluto (no porcentual):
 
 ```
-val > baseline + (baseline × TOUCH_THRESHOLD / 100)
+val > baseline + TOUCH_THRESHOLD
 ```
 
-Al arrancar, el firmware mide el baseline de cada pad 10 veces y promedia. Los valores se muestran en el LCD durante 4 segundos para facilitar la calibración.
+La calibración ocurre en dos etapas al arrancar: una primera lectura inmediata tras conectar el WiFi, y una recalibración automática a los 10 segundos cuando el RF del módulo WiFi ya está completamente estabilizado. Esto garantiza que el baseline captura correctamente el nivel de ruido electromagnético en condiciones reales de operación, incluso cuando los pads tactiles detectan a través del vidrio del equipo.
 
 ---
 

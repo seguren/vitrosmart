@@ -152,7 +152,7 @@ static bool touch_isPressed(uint8_t gpio) {
 }
 
 // ── Estado de edición ────────────────────────────────────────
-enum EditMode { EDIT_NONE, EDIT_TEMP, EDIT_TIME };
+enum EditMode { EDIT_NONE, EDIT_TEMP, EDIT_TIME, EDIT_SCHED };
 
 static EditMode editMode   = EDIT_NONE;
 static uint32_t lastEditMs = 0;
@@ -220,6 +220,9 @@ static bool     addSubTriggered     = false;
 static uint32_t powerHoldStart      = 0;
 static uint32_t powerReleaseStart   = 0;
 static bool     powerLongFired      = false;
+static uint32_t timeHoldStart       = 0;
+static uint32_t timeReleaseStart    = 0;
+static bool     timeLongFired       = false;
 
 uint32_t touch_lastActivityMs() { return lastTouchActivityMs; }
 
@@ -236,6 +239,8 @@ void touch_resetHoldTimers() {
     }
     powerHoldStart = powerReleaseStart = 0;
     powerLongFired = false;
+    timeHoldStart  = timeReleaseStart = 0;
+    timeLongFired  = false;
     addSubHoldStart = 0;
     addSubTriggered = false;
 }
@@ -286,10 +291,33 @@ void touch_handle() {
         }
     }
 
+    // ── TIME: press corto → editar timer / press largo (2s) → ver scheduler ──
+    bool timeActive = touch_isActive(TOUCH_TIME);
+    if (timeActive) {
+        timeReleaseStart = 0;
+        if (timeHoldStart == 0) timeHoldStart = millis();
+        if (!timeLongFired && (millis() - timeHoldStart) >= 2000UL) {
+            timeLongFired = true;
+            setEditMode(EDIT_SCHED);
+            buzzer_beep();
+            lastTouchActivityMs = millis();
+        }
+    } else if (timeHoldStart > 0) {
+        if (timeReleaseStart == 0) timeReleaseStart = millis();
+        if ((millis() - timeReleaseStart) >= TOUCH_RELEASE_MS) {
+            if (!timeLongFired && (timeReleaseStart - timeHoldStart) >= TOUCH_HOLD_MS) {
+                handle_time();
+                lastTouchActivityMs = millis();
+            }
+            timeHoldStart    = 0;
+            timeReleaseStart = 0;
+            timeLongFired    = false;
+        }
+    }
+
     bool any = false;
     if (touch_isPressed(TOUCH_ONOFF)) { handle_onoff(); any = true; }
     if (touch_isPressed(TOUCH_TEMP))  { handle_temp();  any = true; }
-    if (touch_isPressed(TOUCH_TIME))  { handle_time();  any = true; }
     if (touch_isPressed(TOUCH_ADD))   { handle_add();   any = true; }
     if (touch_isPressed(TOUCH_SUB))   { handle_sub();   any = true; }
     if (any) lastTouchActivityMs = millis();

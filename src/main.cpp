@@ -43,6 +43,7 @@ static uint32_t lastNtcMs        = 0;
 static uint32_t lastSchedMs      = 0;
 static uint32_t lastWifiCheckMs  = 0;
 static bool     touchReady       = false;
+static uint32_t touchWakeGraceEnd = 0;
 
 // ============================================================
 //  SETUP
@@ -91,8 +92,9 @@ void loop() {
         if (touch_anyActive()) {
             lcd_activity();
             touch_resetHoldTimers();
+            touchWakeGraceEnd = now + 600;
         }
-    } else {
+    } else if (now >= touchWakeGraceEnd) {
         touch_handle();
     }
     webserver_handle();
