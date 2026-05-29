@@ -93,7 +93,7 @@ static void lcd_showIdle() {
     }
     while (row0.length() < 12) row0 += ' ';
     row0 += ntp_isSynced() ? ntp_getTimeString() : "--:--";
-    row0 += " ";  // col 18=buzzer, col 19=reloj se escriben aparte
+    while (row0.length() < 18) row0 += ' ';  // pad hasta col 17 (18 chars, íconos en 18-19)
 
     // ── Fila 1: temperaturas ──────────────────────────────────
     char actBuf[6], spBuf[3];
@@ -124,18 +124,14 @@ static void lcd_showIdle() {
         row3 = "Manual";
     }
 
-    lcd_printRow(0, row0);
+    // Fila 0: escribir los 18 chars + íconos en un solo pase (sin reposicionar cursor)
+    lcd.setCursor(0, 0);
+    lcd.print(row0);
+    lcd.write(buzzer_isEnabled()       ? byte(1) : ' ');
+    lcd.write(schedule_get().enabled   ? byte(0) : ' ');
     lcd_printRow(1, row1);
     lcd_printRow(2, row2);
     lcd_printRow(3, row3);
-    if (buzzer_isEnabled()) {
-        lcd.setCursor(18, 0);
-        lcd.write(byte(1));
-    }
-    if (schedule_get().enabled) {
-        lcd.setCursor(19, 0);
-        lcd.write(byte(0));
-    }
 
 #else
     // ── Fila 0: estado + potencia + temp actual/setpoint (16x2)
@@ -162,13 +158,13 @@ static void lcd_showIdle() {
         row1 = "         ";
     }
     row1 += ntp_isSynced() ? ntp_getTimeString() : "--:--";
+    while (row1.length() < 15) row1 += ' ';  // pad hasta col 14 (15 chars total)
 
     lcd_printRow(0, row0);
-    lcd_printRow(1, row1);
-    if (schedule_get().enabled) {
-        lcd.setCursor(15, 1);
-        lcd.write(byte(0));
-    }
+    // Fila 1: escribir los 15 chars + ícono en un solo pase
+    lcd.setCursor(0, 1);
+    lcd.print(row1.substring(0, 15));
+    lcd.write(schedule_get().enabled ? byte(0) : ' ');
 #endif
 }
 
