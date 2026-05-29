@@ -415,6 +415,12 @@ static void handleScheduleOff() { if (!checkAuth()) return; schedule_disable(); 
 static void handleBuzzerOn()    { if (!checkAuth()) return; buzzer_setEnabled(true);  redirect(); }
 static void handleBuzzerOff()   { if (!checkAuth()) return; buzzer_setEnabled(false); redirect(); }
 
+static void handleRecalibrate() {
+    if (!checkAuth()) return;
+    touch_calibrate();
+    redirect();
+}
+
 // ── Init ──────────────────────────────────────────────────────
 void webserver_init() {
     server.on("/",            HTTP_GET,  handleRoot);
@@ -432,8 +438,9 @@ void webserver_init() {
     server.on("/scheduleoff", HTTP_POST, handleScheduleOff);
     server.on("/smarton",     HTTP_POST, handleSmartOn);
     server.on("/smartoff",    HTTP_POST, handleSmartOff);
-    server.on("/buzzeron",    HTTP_POST, handleBuzzerOn);
-    server.on("/buzzeroff",   HTTP_POST, handleBuzzerOff);
+    server.on("/buzzeron",      HTTP_POST, handleBuzzerOn);
+    server.on("/buzzeroff",     HTTP_POST, handleBuzzerOff);
+    server.on("/recalibrate",   HTTP_POST, handleRecalibrate);
     server.begin();
 }
 

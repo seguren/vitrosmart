@@ -39,8 +39,7 @@
 // ── Pines Salida ────────────────────────────────────────────
 #define PIN_RELAY1 10 // 1000W
 #define PIN_RELAY2 11 // 1000W
-#define PIN_BUZZER                                                             \
-  12 // Activo-bajo, LOW=ON (5V con transistor PNP o pull-up externo)
+#define PIN_BUZZER 12 // Activo-bajo, LOW=ON (5V con transistor PNP o pull-up externo)
 #define PIN_NTC 4 // ADC1_CH3 (GPIO4) — GPIO14 es ADC2, no disponible con WiFi
 
 // ── I2C LCD ─────────────────────────────────────────────────
@@ -51,10 +50,9 @@
 #define LCD_ROWS 2
 
 // ── Touch ───────────────────────────────────────────────────
-#define TOUCH_THRESHOLD 10 // % de caida sobre baseline
-#define TOUCH_HOLD_MS 300  // ms sostenido para registrar toque
-#define TOUCH_RELEASE_MS                                                       \
-  80 // ms inactivo antes de cancelar hold (tolerancia ruido)
+#define TOUCH_THRESHOLD 700  // incremento absoluto sobre baseline (counts) para detección a través del vidrio
+#define TOUCH_HOLD_MS 150    // ms sostenido para registrar toque
+#define TOUCH_RELEASE_MS 80 // ms inactivo antes de cancelar hold (tolerancia ruido)
 #define TOUCH_DEBOUNCE_MS 800 // ms entre lecturas válidas
 
 // ── NTC ─────────────────────────────────────────────────────

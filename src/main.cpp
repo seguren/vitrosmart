@@ -39,9 +39,10 @@
 void wifi_connect();
 void wifi_showStatus();
 
-static uint32_t lastNtcMs      = 0;
-static uint32_t lastSchedMs    = 0;
-static uint32_t lastWifiCheckMs = 0;
+static uint32_t lastNtcMs        = 0;
+static uint32_t lastSchedMs      = 0;
+static uint32_t lastWifiCheckMs  = 0;
+static bool     touchReady       = false;
 
 // ============================================================
 //  SETUP
@@ -50,20 +51,17 @@ void setup() {
     Serial.begin(115200);
 
     relay_init();
-    touch_calibrate();
-    {
-        char r0[17], r1[17];
-        snprintf(r0, 17, "ON:%lu", touch_getBaseline(TOUCH_ONOFF));
-        snprintf(r1, 17, "ADD:%lu", touch_getBaseline(TOUCH_ADD));
-        lcd_showMessage(r0, r1, 4000);
-    }
+    lcd_init();
     buzzer_init();
     ntc_init();        // carga setpoint desde NVS
     timer_init();
-    lcd_init();
 
     wifi_connect();
     wifi_showStatus();
+
+    // Calibrar touch DESPUÉS de WiFi; delay para que el RF se estabilice
+    delay(500);
+    touch_calibrate();
 
     ntp_init();        // carga scheduler desde NVS, sincroniza NTP
     if (ntp_isSynced()) {
@@ -82,6 +80,12 @@ void setup() {
 // ============================================================
 void loop() {
     uint32_t now = millis();
+
+    // Recalibración automática a los 10s (WiFi ya estabilizado)
+    if (!touchReady && now >= 10000UL) {
+        touchReady = true;
+        touch_calibrate();
+    }
 
     if (!lcd_isBacklightOn()) {
         if (touch_anyActive()) {

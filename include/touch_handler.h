@@ -101,10 +101,22 @@ void touch_printBaselines() {
     const char* names[] = {"ON/OFF","POWER","TEMP","TIME","ADD","SUB"};
     Serial.println("-- Touch baselines --");
     for (uint8_t i = 0; i < NUM_TOUCH; i++) {
-        Serial.printf("  %s (GPIO%d): %lu\n",
+        Serial.printf("  %s (GPIO%d): %u\n",
             names[i], TOUCH_GPIO_LIST[i],
             touchBaseline[TOUCH_GPIO_LIST[i]]);
     }
+}
+
+void touch_printRaw() {
+    const char* names[] = {"ON","PW","TM","TI","AD","SB"};
+    for (uint8_t i = 0; i < NUM_TOUCH; i++) {
+        uint8_t  gpio = TOUCH_GPIO_LIST[i];
+        uint32_t base = touchBaseline[gpio];
+        uint32_t val  = touchRead(gpio);
+        int32_t  diff = (int32_t)val - (int32_t)base;
+        Serial.printf("%s:%u(+%d) ", names[i], val, diff);
+    }
+    Serial.println();
 }
 
 // ── Detección ────────────────────────────────────────────────
@@ -112,8 +124,7 @@ static bool touch_isActive(uint8_t gpio) {
     uint32_t base = touchBaseline[gpio];
     if (base == 0) return false;
     uint32_t val  = touchRead(gpio);
-    uint32_t limit = base + (base * TOUCH_THRESHOLD / 100);
-    return (val > limit);
+    return (val > base + TOUCH_THRESHOLD);
 }
 
 static uint32_t lastTouchMs[14]        = {0};
